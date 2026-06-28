@@ -115,9 +115,7 @@ static int emit_json_string(bcfg_buf *out, const char *s, size_t len)
 static int emit_u32(bcfg_buf *out, uint32_t v)
 {
     char tmp[16];
-    int n = snprintf(tmp, sizeof tmp, "%" PRdummy, 0); /* placeholder */
-    (void)n;
-    n = snprintf(tmp, sizeof tmp, "%lu", (unsigned long)v);
+    int n = snprintf(tmp, sizeof tmp, "%lu", (unsigned long)v);
     if (n < 0)
         return BCFG_ERR_INVALID;
     return bcfg_buf_put_bytes(out, tmp, (size_t)n);
