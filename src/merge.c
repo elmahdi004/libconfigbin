@@ -210,17 +210,6 @@ static int clone_section(const bcfg_section *src, bcfg_section *dst)
     return BCFG_OK;
 }
 
-/* Free a section's owned memory (name + entries array). */
-static void free_section(bcfg_section *s)
-{
-    free(s->name);
-    if (s->entries) {
-        for (uint32_t j = 0; j < s->num_entries; j++)
-            free_entry(&s->entries[j]);
-        free(s->entries);
-    }
-}
-
 /* ------------------------------------------------------------------ */
 /* public: bcfg_doc_clone                                               */
 /* ------------------------------------------------------------------ */

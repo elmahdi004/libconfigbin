@@ -320,7 +320,7 @@ int bcfg_dump_hex(const uint8_t *data, size_t n, bcfg_buf *out)
 
     /* one line per 16 bytes: "OFFSET  hh hh ...  |ascii|" */
     for (size_t off = 0; off < n; off += 16) {
-        char line[8];
+        char line[24];
         size_t i;
 
         snprintf(line, sizeof line, "%08zx", off);
