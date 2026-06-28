@@ -1,0 +1,34 @@
+# libconfigbin fuzzing dictionary
+# Tokens: magic bytes, type tags, sync word
+
+# File magic
+"BCFG"
+"\x42\x43\x46\x47"
+
+# Frame sync
+"\xbc\xbe"
+"\xbe\xbc"
+
+# Value type tags
+"\x00"
+"\x01"
+"\x02"
+"\x03"
+"\x04"
+"\x05"
+"\x06"
+"\x07"
+"\x08"
+"\x09"
+
+# Interesting lengths / counts
+"\x00\x00"
+"\x01\x00"
+"\xff\xff"
+"\x00\x20"
+"\x01\x20"
+"\xff\x00"
+
+# Version
+"\x01\x00"
+"\x02\x00"

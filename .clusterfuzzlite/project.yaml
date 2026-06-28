@@ -1,0 +1,7 @@
+language: c++
+fuzz_targets:
+  - config_fuzzer
+  - frame_fuzzer
+sanitizers:
+  - address
+  - undefined
