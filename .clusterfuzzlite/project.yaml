@@ -3,6 +3,7 @@ fuzz_targets:
   - config_fuzzer
   - frame_fuzzer
   - overlay_fuzzer
+  - merge_fuzzer
 sanitizers:
   - address
   - undefined

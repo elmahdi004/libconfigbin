@@ -21,9 +21,9 @@ typedef struct {
     size_t cap;
 } name_pool;
 
-/* one accumulated section: name lives in the pool, plus a little metadata */
+/* one accumulated section: name lives in the pool at name_off, plus metadata */
 typedef struct {
-    const char *name;
+    size_t      name_off;
     size_t      name_len;
     uint32_t    entry_count;
 } ov_rec;
@@ -50,28 +50,24 @@ static int pool_reserve(name_pool *p, size_t need)
     while (ncap - p->len < need)
         ncap *= 2;
 
-    char *nb = (char *)malloc(ncap);
+    char *nb = (char *)realloc(p->buf, ncap);
     if (!nb)
         return BCFG_ERR_NOMEM;
-    if (p->buf) {
-        memcpy(nb, p->buf, p->len);
-        free(p->buf);
-    }
     p->buf = nb;
     p->cap = ncap;
     return BCFG_OK;
 }
 
-/* copy n bytes (plus a terminator) into the pool, returning their location */
-static char *pool_intern(name_pool *p, const char *s, size_t n)
+/* copy n bytes (plus a terminator) into the pool, returning their offset */
+static size_t pool_intern(name_pool *p, const char *s, size_t n)
 {
     if (pool_reserve(p, n + 1) != BCFG_OK)
-        return NULL;
-    char *at = p->buf + p->len;
-    memcpy(at, s, n);
-    at[n] = '\0';
+        return (size_t)-1;
+    size_t off = p->len;
+    memcpy(p->buf + off, s, n);
+    p->buf[off + n] = '\0';
     p->len += n + 1;
-    return at;
+    return off;
 }
 
 static int secs_reserve(bcfg_overlay *ov)
@@ -104,8 +100,8 @@ int bcfg_overlay_apply(bcfg_overlay *ov, const uint8_t *doc, size_t len)
         if (s->num_entries == 0)
             continue;
 
-        char *pooled = pool_intern(&ov->pool, s->name, s->name_len);
-        if (!pooled) {
+        size_t off = pool_intern(&ov->pool, s->name, s->name_len);
+        if (off == (size_t)-1) {
             bcfg_free(d);
             return BCFG_ERR_NOMEM;
         }
@@ -113,7 +109,7 @@ int bcfg_overlay_apply(bcfg_overlay *ov, const uint8_t *doc, size_t len)
             bcfg_free(d);
             return BCFG_ERR_NOMEM;
         }
-        ov->secs[ov->n].name        = pooled;
+        ov->secs[ov->n].name_off    = off;
         ov->secs[ov->n].name_len    = s->name_len;
         ov->secs[ov->n].entry_count = s->num_entries;
         ov->n++;
@@ -129,7 +125,8 @@ int bcfg_overlay_render(bcfg_overlay *ov, bcfg_buf *out)
         return BCFG_ERR_INVALID;
 
     for (size_t i = 0; i < ov->n; i++) {
-        int rc = bcfg_buf_put_bytes(out, ov->secs[i].name, ov->secs[i].name_len);
+        const char *name = ov->pool.buf + ov->secs[i].name_off;
+        int rc = bcfg_buf_put_bytes(out, name, ov->secs[i].name_len);
         if (rc != BCFG_OK)
             return rc;
         if ((rc = bcfg_buf_put_u8(out, '\n')) != BCFG_OK)
