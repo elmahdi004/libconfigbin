@@ -24,12 +24,13 @@ libFuzzer support (available via ClusterFuzzLite).
 
 ## Fuzzing
 
-The `fuzz/` directory contains four libFuzzer harnesses:
+The `fuzz/` directory contains five libFuzzer harnesses:
 
 - **config_fuzzer** — directly fuzzes `bcfg_parse()` and the lookup/access APIs.
 - **frame_fuzzer** — fuzzes the framing layer together with the parser.
 - **overlay_fuzzer** — fuzzes the streaming overlay accumulator over a framed stream.
 - **merge_fuzzer** — fuzzes the two-document cross-reference merge (`bcfg_xref_merge`).
+- **canon_fuzzer** — fuzzes the canonicalizing merge (`bcfg_canon_merge`).
 
 Seed corpus lives in `fuzz/corpus/`.  The optional dictionary
 `fuzz/dictionary.txt` contains format magic bytes and type tags.

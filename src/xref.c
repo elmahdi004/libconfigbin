@@ -66,13 +66,12 @@ static void resolve(mctx *m, int idx, int depth, bcfg_buf *out)
     if (depth > XREF_MAX_DEPTH)
         return;
 
-    msec *cur = &m->secs[idx];
-    bcfg_buf_put_bytes(out, cur->name, cur->name_len);
+    bcfg_buf_put_bytes(out, m->secs[idx].name, m->secs[idx].name_len);
     bcfg_buf_put_u8(out, '\n');
 
     /* the source section and its owner are stable across the expansion */
-    const bcfg_section *src   = cur->src;
-    const bcfg_doc     *owner = cur->owner;
+    const bcfg_section *src   = m->secs[idx].src;
+    const bcfg_doc     *owner = m->secs[idx].owner;
 
     for (uint32_t e = 0; e < src->num_entries; e++) {
         const bcfg_value *v = &src->entries[e].value;
@@ -100,7 +99,7 @@ static void resolve(mctx *m, int idx, int depth, bcfg_buf *out)
     }
 
     /* close the section once its references have been folded in */
-    bcfg_buf_put_bytes(out, cur->name, cur->name_len);
+    bcfg_buf_put_bytes(out, m->secs[idx].name, m->secs[idx].name_len);
     bcfg_buf_put_u8(out, '\n');
 }
 
