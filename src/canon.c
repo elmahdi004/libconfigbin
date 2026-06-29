@@ -1,7 +1,7 @@
 /*
- * canon.c -- canonicalizing merge
+ * canon.c -- canonicalizing merge and canonical encoding
  *
- * Pipeline:
+ * Pipeline for the merge:
  *   1. parse the base document;
  *   2. index its sections by name;
  *   3. canonicalize: re-serialize the base, dropping sections that hold no
@@ -83,9 +83,11 @@ static int section_has_settings(const bcfg_section *s)
     return 0;
 }
 
-/* serialize doc, dropping sections without settings (the canonical form) */
-static int canon_serialize(const bcfg_doc *doc, bcfg_buf *out)
+int bcfg_canon_encode(const bcfg_doc *doc, bcfg_buf *out)
 {
+    if (!doc || !out)
+        return BCFG_ERR_INVALID;
+
     uint16_t kept = 0;
     for (uint16_t i = 0; i < doc->num_sections; i++)
         if (section_has_settings(&doc->sections[i]))
@@ -113,14 +115,12 @@ static int canon_serialize(const bcfg_doc *doc, bcfg_buf *out)
 }
 
 /*
- * Rebind a section to the canonical document.  If the section was folded away
- * during canonicalization it is not present there, so the original binding is
- * kept as a fallback so callers still have a section to report.
+ * Rebind a section to the canonical document.  A section that was folded away
+ * during canonicalization is not present there; it has no canonical binding.
  */
 static const bcfg_section *rebind(const bcfg_doc *canon, const cref *c)
 {
-    bcfg_section *s = bcfg_get_section(canon, c->name);
-    return s ? s : c->sec;
+    return bcfg_get_section(canon, c->name);
 }
 
 int bcfg_canon_merge(const uint8_t *base, size_t blen,
@@ -138,7 +138,6 @@ int bcfg_canon_merge(const uint8_t *base, size_t blen,
         A = NULL;
 
     if (A) {
-        /* index every base section by name */
         for (uint16_t i = 0; i < A->num_sections; i++) {
             bcfg_section *s = &A->sections[i];
             if (ctab_add(&tab, s->name, s->name_len, s) != BCFG_OK) {
@@ -147,25 +146,24 @@ int bcfg_canon_merge(const uint8_t *base, size_t blen,
             }
         }
 
-        /* canonicalize: serialize without empty sections, then re-parse */
         bcfg_buf sa;
         bcfg_buf_init(&sa);
-        if (canon_serialize(A, &sa) == BCFG_OK)
+        if (bcfg_canon_encode(A, &sa) == BCFG_OK)
             (void)bcfg_parse(sa.data, sa.len, &A2);
         bcfg_buf_free(&sa);
 
-        /* point the index at the canonical document */
         if (A2) {
             for (size_t k = 0; k < tab.n; k++)
                 tab.e[k].sec = rebind(A2, &tab.e[k]);
+        } else {
+            for (size_t k = 0; k < tab.n; k++)
+                tab.e[k].sec = NULL;
         }
 
-        /* the original parse is no longer needed now that we have the canon */
         bcfg_free(A);
         A = NULL;
     }
 
-    /* merge the patch against the canonical index */
     if (bcfg_parse(patch, plen, &B) != BCFG_OK)
         B = NULL;
 
@@ -173,8 +171,7 @@ int bcfg_canon_merge(const uint8_t *base, size_t blen,
         for (uint16_t i = 0; i < B->num_sections; i++) {
             bcfg_section *sb = &B->sections[i];
             cref *c = ctab_find(&tab, sb->name, sb->name_len);
-            if (c) {
-                /* overrides a canonical section: report canon=patch */
+            if (c && c->sec) {
                 if (bcfg_buf_put_bytes(out, c->sec->name, c->sec->name_len) != BCFG_OK ||
                     bcfg_buf_put_u8(out, '=') != BCFG_OK ||
                     bcfg_buf_put_bytes(out, sb->name, sb->name_len) != BCFG_OK ||
@@ -183,7 +180,6 @@ int bcfg_canon_merge(const uint8_t *base, size_t blen,
                     goto cleanup;
                 }
             } else {
-                /* new section contributed by the patch */
                 if (bcfg_buf_put_u8(out, '+') != BCFG_OK ||
                     bcfg_buf_put_bytes(out, sb->name, sb->name_len) != BCFG_OK ||
                     bcfg_buf_put_u8(out, '\n') != BCFG_OK) {

@@ -11,38 +11,18 @@
 
 cd "$SRC"
 
-# Compile library objects
-$CC  $CFLAGS   -I"$SRC/src" -c src/configbin.c -o configbin.o
-$CC  $CFLAGS   -I"$SRC/src" -c src/value.c     -o value.o
-$CC  $CFLAGS   -I"$SRC/src" -c src/frame.c     -o frame.o
-$CC  $CFLAGS   -I"$SRC/src" -c src/buffer.c    -o buffer.o
-$CC  $CFLAGS   -I"$SRC/src" -c src/overlay.c   -o overlay.o
-$CC  $CFLAGS   -I"$SRC/src" -c src/xref.c      -o xref.o
-$CC  $CFLAGS   -I"$SRC/src" -c src/writer.c    -o writer.o
-$CC  $CFLAGS   -I"$SRC/src" -c src/canon.c     -o canon.o
+# Compile every library module into an object.
+OBJS=""
+for f in src/*.c; do
+    o="$(basename "$f" .c).o"
+    $CC $CFLAGS -I"$SRC/src" -c "$f" -o "$o"
+    OBJS="$OBJS $o"
+done
 
-# Link fuzz targets
-$CXX $CXXFLAGS $LIB_FUZZING_ENGINE \
-    fuzz/config_fuzzer.cc configbin.o value.o \
-    -I"$SRC/src" \
-    -o "$OUT/config_fuzzer"
-
-$CXX $CXXFLAGS $LIB_FUZZING_ENGINE \
-    fuzz/frame_fuzzer.cc configbin.o value.o frame.o \
-    -I"$SRC/src" \
-    -o "$OUT/frame_fuzzer"
-
-$CXX $CXXFLAGS $LIB_FUZZING_ENGINE \
-    fuzz/overlay_fuzzer.cc configbin.o value.o frame.o buffer.o overlay.o \
-    -I"$SRC/src" \
-    -o "$OUT/overlay_fuzzer"
-
-$CXX $CXXFLAGS $LIB_FUZZING_ENGINE \
-    fuzz/merge_fuzzer.cc configbin.o value.o frame.o buffer.o xref.o \
-    -I"$SRC/src" \
-    -o "$OUT/merge_fuzzer"
-
-$CXX $CXXFLAGS $LIB_FUZZING_ENGINE \
-    fuzz/canon_fuzzer.cc configbin.o value.o frame.o buffer.o writer.o canon.o \
-    -I"$SRC/src" \
-    -o "$OUT/canon_fuzzer"
+# Link each harness against the whole library.
+for h in config frame overlay merge canon pipeline; do
+    $CXX $CXXFLAGS $LIB_FUZZING_ENGINE \
+        "fuzz/${h}_fuzzer.cc" $OBJS \
+        -I"$SRC/src" \
+        -o "$OUT/${h}_fuzzer"
+done

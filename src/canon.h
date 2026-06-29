@@ -1,10 +1,11 @@
 /*
- * canon.h -- canonicalizing merge
+ * canon.h -- canonicalizing merge and canonical encoding
  *
- * Produces a canonical form of a base document by round-tripping it through the
- * wire format -- sections that carry no effective settings (no non-null entry)
- * are folded away during canonicalization -- and then merges a patch document
- * against that canonical form, reporting how each patch section relates to it.
+ * Canonicalization re-serializes a document while folding away sections that
+ * carry no effective settings (no non-null entry).  bcfg_canon_encode exposes
+ * just the encoding step; bcfg_canon_merge canonicalizes a base document (via a
+ * serialize / re-parse round trip) and merges a patch document against it,
+ * reporting how each patch section relates to the canonical form.
  *
  *   bcfg_buf out; bcfg_buf_init(&out);
  *   bcfg_canon_merge(base, blen, patch, plen, &out);
@@ -26,6 +27,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/*
+ * Encode doc in canonical form, appending to out: the v1 wire format with
+ * sections that hold no non-null entry omitted.  Returns BCFG_OK, BCFG_ERR_NOMEM
+ * or BCFG_ERR_INVALID.
+ */
+int bcfg_canon_encode(const bcfg_doc *doc, bcfg_buf *out);
 
 /*
  * Canonicalize base and merge patch into it, appending the report to out.

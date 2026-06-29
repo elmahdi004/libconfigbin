@@ -5,6 +5,7 @@ fuzz_targets:
   - overlay_fuzzer
   - merge_fuzzer
   - canon_fuzzer
+  - pipeline_fuzzer
 sanitizers:
   - address
   - undefined
