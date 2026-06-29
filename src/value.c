@@ -64,27 +64,22 @@ int bcfg_parse_array(const uint8_t **pp, const uint8_t *end,
         return BCFG_ERR_INVALID;   /* var-size or unknown elem type */
 
     /*
-     * Compute the total byte span of the element block.
-     *
-     * BUG: both count and elem_size can together exceed UINT16_MAX.
-     * For example: elem_type=INT64 (elem_size=8), count=8193 (0x2001).
-     *   8193 * 8 = 65544, which truncates to 8 when stored in uint16_t.
-     * The truncated value is then used for the bounds check AND the malloc,
-     * so we allocate only 8 bytes but subsequently memcpy 65544 bytes into
-     * that buffer — a heap buffer overflow.
+     * Total byte span of the element block.  count is up to UINT16_MAX and
+     * elem_size up to 8, so the product can exceed 16 bits; compute it in a
+     * size_t so the same value backs the bounds check, the allocation and the
+     * copy below.
      */
-    uint16_t total_bytes = (uint16_t)(count * elem_size);
+    size_t total_bytes = (size_t)count * elem_size;
 
     if ((size_t)(end - p) < total_bytes)
         return BCFG_ERR_TRUNCATED;
 
-    void *buf = malloc(total_bytes);
+    void *buf = malloc(total_bytes ? total_bytes : 1);
     if (!buf)
         return BCFG_ERR_NOMEM;
 
-    /* copies count*elem_size bytes — may vastly exceed total_bytes */
-    memcpy(buf, p, (size_t)count * elem_size);
-    p += (size_t)count * elem_size;
+    memcpy(buf, p, total_bytes);
+    p += total_bytes;
 
     out->type            = BCFG_TYPE_ARRAY;
     out->v.array.elem_type = elem_type;

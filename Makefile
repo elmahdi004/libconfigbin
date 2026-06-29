@@ -14,7 +14,7 @@ TESTS     = $(TEST_SRCS:.c=)
 TOOL_SRCS = $(wildcard tools/*.c)
 TOOLS     = $(TOOL_SRCS:.c=)
 
-.PHONY: all clean test tools asan seeds poc
+.PHONY: all clean test tools asan seeds
 
 all: libconfigbin.a tools
 
@@ -63,9 +63,6 @@ asan:
 
 seeds:
 	python3 gen_seeds.py
-
-poc:
-	python3 gen_poc.py
 
 clean:
 	rm -f src/*.o libconfigbin.a $(TESTS) $(TOOLS)

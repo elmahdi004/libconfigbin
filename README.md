@@ -14,10 +14,9 @@ byte stream (useful for network transport or append-only config logs).
 ## Building
 
 ```
-make          # build static library
+make          # build static library and tools
 make test     # build and run unit tests
 make seeds    # (re)generate seed corpus for fuzzers
-make poc      # generate proof-of-concept crashing input
 ```
 
 Requires a C11-compatible compiler.  The fuzzing harnesses require clang with
@@ -25,10 +24,11 @@ libFuzzer support (available via ClusterFuzzLite).
 
 ## Fuzzing
 
-The `fuzz/` directory contains two libFuzzer harnesses:
+The `fuzz/` directory contains three libFuzzer harnesses:
 
 - **config_fuzzer** — directly fuzzes `bcfg_parse()` and the lookup/access APIs.
 - **frame_fuzzer** — fuzzes the framing layer together with the parser.
+- **overlay_fuzzer** — fuzzes the streaming overlay accumulator over a framed stream.
 
 Seed corpus lives in `fuzz/corpus/`.  The optional dictionary
 `fuzz/dictionary.txt` contains format magic bytes and type tags.
